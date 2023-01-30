@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-VERSION=v1.4.2
+VERSION=v1.4.8
 
 PKG=github.com/kubernetes-sigs/aws-efs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -57,9 +57,7 @@ word-hyphen = $(word $2,$(subst -, ,$1))
 .PHONY: linux/$(ARCH) bin/aws-efs-csi-driver
 linux/$(ARCH): bin/aws-efs-csi-driver
 bin/aws-efs-csi-driver: | bin
-# OpenShift: <carry>: do not overwrite GOARCH, use the one provided by the builder.
-	@echo GOARCH:${GOARCH}
-	CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags ${LDFLAGS} -o bin/aws-efs-csi-driver ./cmd/
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -mod=vendor -ldflags ${LDFLAGS} -o bin/aws-efs-csi-driver ./cmd/
 
 .PHONY: all
 all: all-image-docker
