@@ -57,21 +57,24 @@ Encryption in transit is enabled by default in the master branch version of the 
 The following sections are Kubernetes specific. If you are a Kubernetes user, use this for driver features, installation steps and examples.
 
 ### Kubernetes Version Compability Matrix
-| AWS EFS CSI Driver \ Kubernetes Version| maturity | v1.11 | v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17+ |
-|----------------------------------------|----------|-------|-------|-------|-------|-------|-------|-------|
-| master branch                          | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.3.x                                 | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.2.x                                 | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.1.x                                 | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v1.0.x                                 | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.3.0                                 | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.2.0                                 | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.1.0                                 | alpha    | yes   | yes   | yes   | no    | no    | no    | no    |
+| AWS EFS CSI Driver \ Kubernetes Version | maturity | v1.11 | v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17+ |
+|-----------------------------------------|----------|-------|-------|-------|-------|-------|-------|-------|
+| master branch                           | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.4.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.3.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.2.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.1.x                                  | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v1.0.x                                  | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.3.0                                  | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.2.0                                  | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.1.0                                  | alpha    | yes   | yes   | yes   | no    | no    | no    | no    |
 
 ### Container Images
 | EFS CSI Driver Version | Image                            |
 |------------------------|----------------------------------|
 | master branch          | amazon/aws-efs-csi-driver:master |
+| v1.5.0                 | amazon/aws-efs-csi-driver:v1.5.0 |
+| v1.4.9                 | amazon/aws-efs-csi-driver:v1.4.9 |
 | v1.4.8                 | amazon/aws-efs-csi-driver:v1.4.8 |
 | v1.4.7                 | amazon/aws-efs-csi-driver:v1.4.7 |
 | v1.4.6                 | amazon/aws-efs-csi-driver:v1.4.6 |
@@ -113,14 +116,14 @@ The following sections are Kubernetes specific. If you are a Kubernetes user, us
 ### Installation
 #### Set up driver permission:
 The driver requires IAM permission to talk to Amazon EFS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
-* Using IAM Role for Service Account (Recommended if you're using EKS): create an [IAM Role for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) with the [required permissions](./iam-policy-example.json). Uncomment annotations and put the IAM role ARN in [service-account manifest](../deploy/kubernetes/base/serviceaccount-csi-controller.yaml)
+* Using IAM Role for Service Account (Recommended if you're using EKS): create an [IAM Role for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) with the [required permissions](./iam-policy-example.json). Uncomment annotations and put the IAM role ARN in [service-account manifest](https://github.com/kubernetes-sigs/aws-efs-csi-driver/blob/master/deploy/kubernetes/base/controller-serviceaccount.yaml)
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [required permissions](./iam-policy-example.json) by attaching policy to the instance profile of the worker.
 
 #### Deploy the driver:
 
 If you want to deploy the stable driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.3"
+kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4"
 ```
 
 If you want to deploy the development driver:
@@ -138,6 +141,34 @@ helm upgrade --install aws-efs-csi-driver --namespace kube-system aws-efs-csi-dr
 To force the efs-csi-driver to use FIPS, you can add an argument to the helm upgrade command:
 ```
 helm upgrade --install aws-efs-csi-driver --namespace kube-system aws-efs-csi-driver/aws-efs-csi-driver --set useFips=true
+```
+### Container Arguments for efs-plugin of efs-csi-node daemonset
+| Parameters                  | Values | Default | Optional | Description                                                                                                                                                                                                                             |
+|-----------------------------|--------|---------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| vol-metrics-opt-in          |        | false   | true     | Opt in to emit volume metrics.                                                                                                                                                                                                          |
+| vol-metrics-refresh-period  |        | 240     | true     | Refresh period for volume metrics in minutes.                                                                                                                                                                                           |
+| vol-metrics-fs-rate-limit   |        | 5       | true     | Volume metrics routines rate limiter per file system.                                                                                                                                                                                   |
+ | delete-access-point-root-dir|        | false  | true     | Opt in to delete access point root directory by DeleteVolume. By default, DeleteVolume will delete the access point behind Persistent Volume and deleting access point will not delete the access point root directory or its contents. |
+| tags                         |       |         | true     | Space separated key:value pairs which will be added as tags for EFS resources. For example, '--tags=name:efs-tag-test date:Jan24'                                                                                                       |
+
+### Upgrading the EFS CSI Driver
+
+
+#### Upgrade to the latest version:
+If you want to update to latest released version:
+```sh
+kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4"
+```
+
+#### Upgrade to a specific version:
+If you want to update to a specific version, first customize the driver yaml file locally:
+```sh
+kubectl kustomize "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4" > driver.yaml
+```
+
+Then, update all lines referencing `image: amazon/aws-efs-csi-driver` to the desired version (e.g., to `image: amazon/aws-efs-csi-driver:v1.4.8`) in the yaml file, and deploy driver yaml again:
+```sh
+kubectl apply -f driver.yaml
 ```
 
 ### Examples
